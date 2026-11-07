@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Unidad D:\sentimientos</title>
+    <link rel="icon" type="image/png" href="imagenes/win95.png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>  
+        html {
+            height: 100%;
+            width: 100%;
+            overflow: hidden; /* <--- CLAVE: Esto elimina las barras de desplazamiento */
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #008080;
+            font-family: 'MS Sans Serif', sans-serif;
+            
+            /* ESTO ES LO NUEVO Y CRÍTICO: */
+            overflow: hidden;  /* Doble seguridad anti-scroll */
+            display: flex;     /* Convierte el body en columna */
+            flex-direction: column; 
+            
+            height: 100%;      /* Altura completa */
+            height: -webkit-fill-available; /* Truco para que Safari/iPhone se vea perfecto */
+            width: 100%;
+            position: fixed;   /* Truco definitivo para evitar el "rebote" elástico en móviles */
+        }
+        .desktop-icon {
+            width: 48px;
+            height: 48px;
+        }
+        .icon-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        .desktop-icon-container {
+            position: absolute;
+            width: 90px;
+            cursor: pointer;
+            z-index: 10;
+        }
+        .desktop-icon-container:focus > .small {
+            background-color: #000080;
+            color: white;
+            outline: 1px dotted #ffffff;
+        }
+        .window {
+            position: absolute;
+            width: 350px;
+            background: #c0c0c0;
+            border: 2px outset #ffffff;
+            padding: 1px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+        .window.resizable {
+            min-width: 250px;
+            min-height: 200px;
+            height: 400px;
+        }
+        .window.not-resizable {
+            height: 400px;
+        }
+        .window-header {
+            color: white;
+            padding: 3px 5px;
+            font-weight: bold;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+        .window-header-active { background: #000080; }
+        .window-header-inactive { background: #808080; }
+        .window-header-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 4px;
+        }
+        .window-controls button {
+        width: 18px;
+        height: 18px;
+        background-color: #c0c0c0;
+        border: 1px outset #fff;
+        font-family: 'MS Sans Serif', sans-serif; /* Ya no necesitamos Marlett */
+        font-size: 16px; /* Hacemos la 'X' un poco más grande */
+        padding: 0;
+        line-height: 1; /* Mantenemos la altura de línea */
+        /* Añadimos Flexbox para un centrado perfecto */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #000; /* <-- AÑADE ESTA LÍNEA */
+        }
+        .window-content {
+        border-top: 2px solid #808080;
+        padding: 5px; 
+        flex-grow: 1;
+         overflow: hidden; /* El scroll lo manejará el hijo */
+        background: #c0c0c0;
+        }
+        
+        .resize-handle {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            bottom: 0;
+            right: 0;
+            cursor: nwse-resize;
+            z-index: 101;
+            background: repeating-linear-gradient(-45deg, #808080, #808080 1px, transparent 2px, transparent 4px);
+        }
+        .taskbar {
+            position: fixed; /* Cambiado a fixed para que siempre esté en la base visual */
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40px; /* ALTURA FIJA E INAMOVIBLE */
+            background: #c0c0c0;
+            border-top: 2px solid #ffffff;
+            padding: 2px 4px;
+            display: flex;
+            flex-wrap: nowrap; /* IMPIDE QUE LOS ELEMENTOS SALTEN ABAJO */
+            align-items: center;
+            gap: 4px;
+            z-index: 10000;
+            box-sizing: border-box;
+            display: none !important; /* <--- Añade esto */
+        }
+        .start-button {
+            background: #c0c0c0;
+            padding: 2px 6px;
+            border: 2px outset #fff;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0 !important; /* Prohibido encogerse */
+            white-space: nowrap !important; /* Evita que el nombre salte de línea */
+        }
+        .start-button:active { border-style: inset; }
+        .start-button img {
+            width: 20px;
+            margin-right: 5px;
+        }
+        .taskbar-tabs {
+            display: flex !important;
+            flex: 1 !important;       /* Ocupa todo el espacio central disponible */
+            flex-direction: row !important;
+            gap: 3px !important;      /* Espacio entre pestañas */
+            overflow: hidden !important;
+            margin: 0 5px !important;
+        }
+        .taskbar-tab {
+            background: #c0c0c0;
+            padding: 3px 8px;
+            border: 2px outset #fff;
+            font-size: 13px; /* Un pelín más pequeña para ganar espacio */
+            cursor: pointer;
+            
+            /* PROPIEDADES DE FLEXIBILIDAD */
+            flex: 1 1 auto; /* Se estira y encoge según el espacio */
+            min-width: 35px; /* Tamaño mínimo para que quepa el icono en móvil */
+            max-width: 150px; /* Tamaño máximo para que no se vea rara en PC */
+            
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis; /* Pone los "..." si el nombre es largo */
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .taskbar-tab.active {
+            border-style: inset;
+            font-weight: bold;
+        }
+        .clock-panel {
+            border: 2px inset #808080;
+            padding: 2px 8px;
+            font-size: 14px;
+        }
+        .notepad {
+            background: #fff;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            font-size: 14px;
+            height: 100%;
+            overflow-y: auto;
+        }
+        .mp3-player {
+            background: #c0c0c0;
+            padding: 10px;
+            text-align: center;
+            font-size: 13px;
+        }
+        .mp3-gif {
+            width: 300px;
+            height: 220px;
+            object-fit: cover;
+            border: 2px inset #fff;
+        }
+
+        .lyrics-container {
+            background-color: #c0c0c0; /* El gris de fondo de las ventanas */
+            padding: 3px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .lyrics-title-bar {
+        padding: 5px 8px 5px 8px;
+        font-size: 32px; /* Letra un poco más grande */
+        font-weight: bold; /* Título en negrita */
+        flex-shrink: 0;
+        border-bottom: 1px solid #808080;
+        display: flex; /* Añadido para centrar */
+        align-items: center; /* Añadido para centrar verticalmente */
+        min-height: 32px; /* Asegura una altura mínima para el centrado */
+        }
+
+        .lyrics-text-box {
+            background-color: #fff;
+            border: 2px inset #808080; /* Borde hundido clásico */
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            font-size: 14px;
+            overflow-y: scroll; /* Barra de scroll vertical */
+            flex-grow: 1; /* Ocupa el resto del espacio */
+        }
+
+        /* Estilo para los enlaces dentro de la nueva caja de texto */
+        .lyrics-text-box a {
+            color: #0000FF;
+            text-decoration: underline;
+        }
+        .lyrics-text-box a:hover {
+            color: #FF00FF;
+        }
+        .folder-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-content: flex-start;
+        }
+
+        .folder-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 15px;
+        align-content: start;
+        justify-items: center;
+        padding: 10px;
+        background: #fff; /* <-- Añade el fondo blanco aquí */
+        border: 2px inset #808080; /* <-- Añade un borde clásico */
+        height: 100%; /* Opcional, para que ocupe todo el espacio */
+        }
+
+        /* --- ESTILOS DEL SALVAPANTALLAS --- */
+    #screensaver {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    z-index: 2000; /* Muy alto para que esté por encima de todo */
+    display: none; /* Se activa con JS */
+    cursor: pointer;
+    }
+    #screensaver-logo {
+    position: absolute;
+    width: 200px; /* Tamaño del logo (ajústalo si es necesario) */
+    height: 150px;
+    display: block;
+    }
+
+    /* Y modifica la regla del reloj para que el cursor cambie */
+    .clock-panel {
+    border: 2px inset #808080;
+    padding: 2px 8px;
+    font-size: 15px;
+    cursor: pointer; /* <--- Añade esta línea */
+    flex-shrink: 0 !important; /* Prohibido encogerse */
+    width: 60px !important;    /* Ancho fijo para el reloj */
+    text-align: center !important;
+    }
+
+    .video-player-content {
+    background-color: #000;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    }
+
+    .video-player-content iframe {
+    flex-grow: 1;
+    border: none;
+    }
+
+    .listen-options-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px;
+    background-color: #c0c0c0;
+    height: 100%;
+    }
+
+    .streaming-button {
+    display: block;
+    padding: 8px;
+    background: #c0c0c0;
+    border: 2px outset #fff;
+    text-align: center;
+    color: #000;
+    text-decoration: none;
+    font-weight: bold;
+    }
+
+    .streaming-button:active {
+    border-style: inset;
+    }
+
+    @media (max-height: 700px) {
+    .icon-wrapper {
+        height: calc(100vh - 40px); /* Ocupa toda la altura menos la barra de tareas */
+        overflow-y: auto;          /* Añade el scroll vertical si es necesario */
+        }
+    }
+
+    /* Animación de parpadeo */
+    @keyframes blink {
+        30% { opacity: 0; }
+    }
+
+    .start-prompt-container {
+        position: absolute;
+        top: 75%; /* Lo posiciona en la parte inferior de la pantalla */
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: white;
+        z-index: 2001; /* Asegura que esté por encima del logo */
+        text-shadow: 2px 2px #000;
+    }
+
+    .start-prompt-main {
+        font-family: 'Press Start 2P', cursive; /* La fuente pixelada que hemos añadido */
+        font-size: 24px;
+        /* Aplicamos la animación de parpadeo */
+        animation: blink 1.5s step-start infinite;
+    }
+
+    .start-prompt-secondary {
+        font-family: 'Press Start 2P', cursive;
+        font-size: 12px;
+        margin-top: 15px;
+        opacity: 0.8;
+    }
+
+    @media (max-width: 768px) {
+    .start-prompt-container {
+        top: 50%; /* Centra el texto verticalmente en pantallas de móvil */
+    }
+    #screensaver-logo { /* AÑADE ESTO */
+        width: 150px; /* Tamaño más pequeño para móviles */
+        height: 100px;
+    }
+    .start-prompt-main {
+    font-size: 18px; /* Reducimos el tamaño del título para móviles */
+    }
+
+    .start-prompt-secondary {
+        font-size: 10px; /* Y también el del subtítulo */
+    }
+}
+
+    .popup-content {
+        background-color: #c0c0c0;
+        text-align: center;
+        padding: 15px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .popup-content h3 {
+        font-family: 'MS Sans Serif', sans-serif;
+        font-weight: bold;
+        font-size: 15px;
+        color: #000;
+    }
+
+    .popup-content .mp3-gif {
+        margin-top: 10px;
+        margin-bottom: 24px;
+    }
+
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(0, 0, 128, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(0, 0, 128, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(0, 0, 128, 0);
+        }
+    }
+
+    .popup-button {
+        background: #000080; /* Color azul de ventana activa */
+        color: white; /* Texto en blanco para contraste */
+        border: 2px outset #fff;
+        padding: 12px 20px; /* Hacemos el botón más grande */
+        font-weight: bold;
+        font-size: 16px; /* Letra más grande */
+        cursor: pointer;
+        text-decoration: none;
+        animation: pulse 2s infinite; /* Aplicamos la animación de pulso */
+    }
+
+    .popup-button:active {
+        border-style: inset;
+    }
+
+    #desktop {
+    flex: 1; /* <--- IMPORTANTE: Le dice al escritorio que ocupe TODO el espacio sobrante */
+    position: relative;
+    width: 100%;
+    overflow: hidden; /* Asegura que si un icono se sale, no cree scroll */
+    }
+
+    #taskbar {
+        height: 40px; /* O la altura que tú tengas */
+        flex-shrink: 0; /* <--- IMPORTANTE: Evita que la barra se aplaste si falta sitio */
+        z-index: 10000; /* Asegura que esté siempre encima */
+        
+        /* ... mantén el resto de tus estilos de la barra (colores, bordes) ... */
+    }
+
+    @media (max-width: 768px) {
+    .window {
+        /* Centrado absoluto */
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+    }
+    }
+    </style>
+</head>
+
+<body>
+    <div id="screensaver">
+        <a href="https://www.youtube.com/@estudiosventorrillo" target="_blank" id="screensaver-logo" onclick="event.stopPropagation()">
+            <img src="imagenes/tu-logo.png" alt="Logo" style="width: 100%; height: 100%;">
+        </a>
+        <div class="start-prompt-container">
+            <div class="start-prompt-main">Haz clic en cualquier sitio <br> para empezar</div>
+                <div class="start-prompt-secondary"style="opacity: 0.6;">PD. el logo no cuenta como "cualquier sitio"... <br> pero lo puedes probar tambien ;)</div>
+            </div>
+        </div>
+
+    <div class="icon-wrapper">
+        <div class="desktop-icon-container text-center" style="top: 20px; left: 20px;" tabindex="0">
+            <img src="imagenes/icono-fake-homies.png" class="desktop-icon" data-action="open-file" data-id="fake-h0mies" data-type="mp3" />
+            <div class="small text-white">fake-h0mies.wav</div>
+        </div>
+        
+        <div class="desktop-icon-container text-center" style="top: 120px; left: 20px;" tabindex="0">
+            <img src="imagenes/icono-bachata-core.png" class="desktop-icon" data-action="open-file" data-id="la-bacha7a" data-type="mp3" />
+            <div class="small text-white">la-bacha7a.wav</div>
+        </div>
+        
+        <div class="desktop-icon-container text-center" style="top: 220px; left: 20px;" tabindex="0">
+            <img src="imagenes/icono-pico3-corazon.png" class="desktop-icon" data-action="open-file" data-id="pico-tr3s" data-type="mp3" />
+            <div class="small text-white">pico-tr3s.wav</div>
+        </div>
+        
+        <div class="desktop-icon-container text-center" style="top: 320px; left: 20px;" tabindex="0">
+            <img src="imagenes/icono-cowboy.png" class="desktop-icon" data-action="open-file" data-id="cow8oy" data-type="mp3" />
+            <div class="small text-white">cow8oy.wav</div>
+        </div>
+        
+        <div class="desktop-icon-container text-center" style="top: 420px; left: 20px;" tabindex="0">
+            <img src="imagenes/icono-edicion-esmeralda.png" class="desktop-icon" data-action="open-file" data-id="esmeralda-k1ng" data-type="mp3" />
+            <div class="small text-white">esmeralda-k1ng.wav</div>
+        </div>
+
+        <div class="desktop-icon-container text-center" style="top: 20px; left: 120px;" tabindex="0">
+            <img src="imagenes/icon-folder1.png" class="desktop-icon" data-action="open-folder" data-type="letras" />
+            <div class="small text-white">Letras</div>
+        </div>
+        
+        <div class="desktop-icon-container text-center" style="top: 120px; left: 120px;" tabindex="0">
+            <img src="imagenes/icon-folder2.png" class="desktop-icon" data-action="open-folder" data-type="prompts" />
+            <div class="small text-white">Prompts</div>
+        </div>
+    </div>
+
+    <div id="ventanas"></div>
+
+    <div class="taskbar">
+        <div class="start-button" onclick="abrirVentanaContacto()">
+            <img src="imagenes/win95.png" alt="Start"/>
+            <span>Johnny Lemonic</span>
+        </div>
+        <div class="taskbar-tabs" id="taskbar-tabs"></div>
+        <div class="clock-panel" id="clock">2025</div>
+    </div>
+
+    <script>
+        const canciones = [
+            { id: "la-bacha7a", nombre: "la-bacha7a.wav", iconFile: "icono-bachata-core.png", gif: "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExbnhpb3B1NGJrbTJzbHc0YWY2d21mbDNlNHQ3b3lqZDUyM25tbHhjYyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7aD9hC4HyZ1ZPJgk/giphy.gif", audio: "musica/la-bacha7a_preview.mp3", videoId: "zDxn14wKSZU",
+              streamingLinks: {
+                youtubeMusic: "https://music.youtube.com/watch?v=wVlhgomCfAg&si=Lkp0iCBoi2zZgDsE",
+                spotify: "https://open.spotify.com/intl-es/track/3FnpKHckAhoN1wfwgdyfUw?si=318ed7d53c574df8",
+                amazonMusic: "https://amazon.es/music/player/albums/B0FN6JLHP7?marketplaceId=A1RKKUPIHCS9HS&musicTerritory=ES&ref=dm_sh_PnZ0SK5HFirKTq5Ss2DtQqauG",
+                appleMusic: "https://music.apple.com/us/song/la-bacha7a/1834751043",
+                tidal: "https://link.deezer.com/s/30XaNbB1cwK5773mbFtDX"
+                }   
+             },
+            { id: "fake-h0mies", nombre: "fake-h0mies.wav", iconFile: "icono-fake-homies.png", gif: "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExNWtqcGZkYjZhOGFuczd6ZnY3aWNuZ2l1Mnl4NTd1N2VmZWxkbHliMCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/zxkRAe5oESXC0XN9uR/giphy.gif", audio: "musica/fake-h0mies_preview.mp3", videoId: "Ur5-IHUigjM",
+                streamingLinks: {
+                youtubeMusic: "https://music.youtube.com/watch?v=vAX6BBVwdQo&si=E7JZUYz5gnaGgYmq",
+                spotify: "https://open.spotify.com/intl-es/track/6nB2ozRBtijtseEyQ6kHwE?si=18f5e80f140848a1",
+                amazonMusic: "https://amazon.es/music/player/albums/B0FNKMT6FZ?marketplaceId=A1RKKUPIHCS9HS&musicTerritory=ES&ref=dm_sh_O582OtFp6cZ6XOqb766Ctmtkk",
+                appleMusic: "https://music.apple.com/us/song/fake-h0mies/1835296684",
+                tidal: "https://link.deezer.com/s/30XaMF8W8oXJAJElDwTIU"
+                }   
+             },
+            { id: "cow8oy", nombre: "cow8oy.wav", iconFile: "icono-cowboy.png", gif: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMWQ0a3cwbHlteGt6eDJ3MHIxM2dwaTFrbXN3YWoxY203dWliYW40NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/yIYXnGIYYyQJq/giphy.gif", audio: "musica/cow8oy_preview.mp3", videoId: "E9t3iMkaLNM",
+                streamingLinks: {
+                youtubeMusic: "https://music.youtube.com/watch?v=ERUF2Xyxru0&si=GgnMUNQMktjW1SmH",
+                spotify: "https://open.spotify.com/intl-es/track/5mTu8dfcyiOCyYmEDz7xAX?si=7af61f531cd94033",
+                amazonMusic: "https://amazon.es/music/player/albums/B0FMXCX9MR?marketplaceId=A1RKKUPIHCS9HS&musicTerritory=ES&ref=dm_sh_mUR2R2cg9Mm6uA1errFYC8Jc2",
+                appleMusic: "https://music.apple.com/us/song/cow8oy/1834208565",
+                tidal: "https://link.deezer.com/s/30XaNzR2upENEOZzRtzp3"
+                }   
+             },
+            { id: "pico-tr3s", nombre: "pico-tr3s.wav", iconFile: "icono-pico3-corazon.png", gif: "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNDBtdnRpYWdwdzR3NDc5cHl0NWhtY3Vod2tqOTgzZzc0c3I0MDJrNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/yrNBsUzUm2Eyk/giphy.gif", audio: "musica/pico-tr3s_preview.mp3", videoId: "Gra5_ozkDII",
+                streamingLinks: {
+                youtubeMusic: "https://music.youtube.com/watch?v=G6dpfGYunLk&si=UsyJSPGIgQECNQzn",
+                spotify: "https://open.spotify.com/intl-es/track/2b3FPIzaJAwQJlxQJEzQJj?si=80c06b99e816402c",
+                amazonMusic: "https://amazon.es/music/player/albums/B0FNKP37SD?marketplaceId=A1RKKUPIHCS9HS&musicTerritory=ES&ref=dm_sh_rItQnfcISAcc7XiBvyu549ZZN",
+                appleMusic: "https://music.apple.com/us/song/pico-tr3s/1835280963",
+                tidal: "https://link.deezer.com/s/30XaOdAmGmyFUaA7DliJF"
+                }   
+             },
+            { id: "esmeralda-k1ng", nombre: "esmeralda-k1ng.wav", iconFile: "icono-edicion-esmeralda.png", gif: "https://64.media.tumblr.com/353624dd9dd68abb16ca25c60d1bd1d7/tumblr_nmpmilO1rd1sg438co1_500.gif", audio: "musica/esmeralda-k1ng_preview.mp3", videoId: "iI0jYU95oLs",
+                streamingLinks: {
+                youtubeMusic: "https://music.youtube.com/watch?v=Evm67m2FDD0&si=ziT06-Kg14jlBXg-",
+                spotify: "https://open.spotify.com/intl-es/track/5UmI7Jazndzfg4TDudSJgk?si=89b68f11ce73452d",
+                amazonMusic: "https://amazon.es/music/player/albums/B0FNKQ8V91?marketplaceId=A1RKKUPIHCS9HS&musicTerritory=ES&ref=dm_sh_NPNGuTFnDujnzC2t7rmObSdqm",
+                appleMusic: "https://music.apple.com/us/song/esmeralda-k1ng/1835345134",
+                tidal: "https://link.deezer.com/s/30XaOtD37BWmik0ditqRM"
+                }   
+             }
+        ];
+
+        
+        // REEMPLAZA TU CONSTANTE 'letras' ENTERA POR ESTA
+
+        const letras = {
+            "la-bacha7a": {
+                title: "la-bacha7a",
+                text: `Hoy vengo a soltar\nTodo lo que me pesa.\nYo no soy rencoroso,\nVoy sin drama ni vuelta.\n\nHay cosas que dolieron\nPero que ya no me afectan,\nY si no hubieran pasado\nMe hubiera comido la mierda.\n\nMe dejaste en diciembre,\nPasé un frío invierno.\nMás de un año tardo\nPa’ calentar este averno.\n\nCuando tú te fuiste\nMe quedé sin vida,\nPensé que el mundo acababa,\nQue ya no había salida.\n\nHubo <a href="https://www.youtube.com/watch?v=a81quuhJQjA" target="_blank">11 razones</a>\nPor las que debí dejarte.\nTú debiste tener 12,\nY por eso te marchaste.\n\nTe borré del mapa,\nDe Insta, de Whats...\nPero me hice otra cuenta\nPa’ verte postear.\n\nLo de Turizo no era broma,\nEso era facts.\nEs una herida abierta\nDisfrazada de paz.\n\nTe borré de Insta\nPero no de la cabeza.\nComo en <a href="https://www.youtube.com/watch?v=TiM_TFpT_DE" target="_blank">la Bachata</a>\nTe espiaba con tristeza.\n\nLe solté un “te quiero”\nA quien no lo merecía,\nNo era por amor\nEra pura melancolía.\n\nTe borré de Insta\nPero no de la cabeza.\nComo en la Bachata\nTe espiaba con tristeza.\n\nLe solté un “te quiero”\nA quien no lo merecía,\nNo era por amor\nEra pura melancolía.\n\nIncluso me busqué a otra\nCon tu mismo cumpleaños,\nIntenté olvidarte\nRepitiendo el calendario.\n\nLa felicité con un “te quiero”\nQue no era ni suyo,\nEse era pa’ ti,\nPerdón por ser capullo.\n\nYa no te culpo,\nNi me culpo, ni disimulo.\nMe fui reconstruyendo,\nTú te fuiste con aquel chulo.\n\nAhora duermo tranquilo,\nYa no me arde el motor.\nDesde que no estás cerca\nTodo sabe mejor.\n\nTe borré de Insta\nPero no de la cabeza.\nComo en la Bachata\nTe espiaba con tristeza.\n\nLe solté un “te quiero”\nA quien no lo merecía,\nNo era por amor\nEra pura melancolía.\n\nTe borré de Insta\nPero no de la cabeza.\nComo en la Bachata\nTe espiaba con tristeza.\n\nLe solté un “te quiero”\nA quien no lo merecía,\nNo era por amor\nEra pura melancolía.\n\nTe borré de Insta\nPero no de la cabeza.\nComo en la Bachata\nTe espiaba con tristeza.\n\nLe solté un “te quiero”\nA quien no lo merecía,\nNo era por amor\nEra pura melancolía.`
+            },
+            "fake-h0mies": {
+                title: "fake-h0mies",
+                text: `Me metieron en un lío\nSin pruebas ni razones\nNos juzgaron por rumores\nNo por declaraciones.\n\nY mientras tanto los duros\nMiraban pa’ otro lado\nMe tragué toa la presión\nSin soltar a mi hermano.\n\nDifamaron, juzgaron, \nHasta me trancaron.\nPero como dijo Farruko: \n<a href="https://www.youtube.com/watch?v=1UVrk_D6gLY" target="_blank">Allá arriba hay un juez que todo lo ve</a>,\n\nY por eso tuve fe,  \nLlegó el día y me libré, \nCargué con todo el peso \nAunque no era culpable, lo sé.\n\nYo no necesito “homies”\nSolo pa’l fin de semana,\nQue aparecen cuando hay fiesta\nY está libre la barra.\n\nYo necesito soldados\nPa’ cuando empiece la guerra,\nQue no me den de lado\nSi están las tropas fuera.\n\nBusco broders que no teman\nA morir en la trinchera,\nPero entiendo que pa’ eso\nNo vale cualquiera.\n\nNo me hables de códigos\nSi los rompes por miedo.\nYo me quedé en el fuego\nCuando todos salieron corriendo.\n\nVi cómo vendían lealtad\nPor un poco de calma,\nY luego se escudan en frases\nPa’ limpiarse el alma.\n\nYo bajé al barro\nPa’ sacar a los míos,\nMientras otros subían stories\nCon mensajes vacíos.\n\nNo jugué a ser mártir,\nSolo hice lo correcto,\nPero aprendí que la traición\nSiempre llega en directo.\n\nYo no necesito “homies”\nSolo pa’l fin de semana,\nQue aparecen cuando hay fiesta\nY está libre la barra.\n\nYo necesito soldados\nPa’ cuando empiece la guerra,\nQue no me den de lado\nSi están las tropas fuera.\n\nBusco broders que no teman\nA morir en la trinchera,\nPero entiendo que pa’ eso\nNo vale cualquiera.\n\nAhora hablan de respeto\nLos que no dieron un paso,\nLos que no cayeron conmigo,\nPero sí pisaron el charco.\n\nQue no me vengan con versos\nNi frases de motivao’,\nQue en la guerra vi quién era real\nY quién solo estaba prestao’.\n\nNo busco aplausos ni premios,\nNi llenar la galería,\nSolo quiero un par de nombres\nQue me cubran si algún día…\n\nMe vuelven a joder el plan\nComo en aquella movida.\nPorque de todo lo que aprendí,\nLo más real es la herida.\n\nYo no necesito “homies”\nSolo pa’l fin de semana,\nQue aparecen cuando hay fiesta\nY está libre la barra.\n\nYo necesito soldados\nPa’ cuando empiece la guerra,\nQue no me den de lado\nSi están las tropas fuera.\n\nBusco broders que no teman\nA morir en la trinchera,\nPero entiendo que pa’ eso\nNo vale cualquiera.\n\nYo no necesito “homies”\nSolo pa’l fin de semana,\nQue aparecen cuando hay fiesta\nY está libre la barra.\n\nYo necesito soldados\nPa’ cuando empiece la guerra,\nQue no me den de lado\nSi están las tropas fuera.`
+            },
+            "cow8oy": {
+                title: "cow8oy",
+                text: `Yo no quiero sonar falso,\nSolo quiero sonar duro.\nYa no salgo de fiesta, \n<a href="https://www.youtube.com/watch?v=5hfTiQHgaM4&ab_channel=UnClipazo" target="_blank">Yo no bebo, yo no fumo...</a>\n\nBueno puede ser \nQue si me invitan yo consumo.\nPor ahora me conformo \nCon Monster de desayuno.\n\nDe lunes a viernes \nSoy el que quiero ser;\nEscribo, pienso, creo, \nMe lo llego a creer.\n\nPero llega el finde.\nMe visto de payaso verde,\nMe pongo el uniforme \nY el alma se me pierde.\n\nLos billetes que persigo \nNo pagan este desgaste\nTres años igual, \nViendo a todos adelantarse\n\nMi círculo se mueve, \nCambian curros, cambian fases\nY yo en el mismo sitio, \nSolo cambiando las frases.\n\nYa no soy un Kid \nPero voy al Leroy,\nNo quiero currar más\nQuiero ser un Cowboy.\n\nMe sobra la magia\nNo necesito a Merlín,\nCurrando en la sombra \n<a href="https://www.youtube.com/watch?v=gB-xxEuVrWM" target="_blank">Pa’ brillar</a> como un king.\n\nYa no soy un Kid \nPero voy al Leroy,\nNo quiero currar más\nQuiero ser un Cowboy.\n\nMe sobra la magia\nNo necesito a Merlín,\nCurrando en la sombra \nPa’ brillar como un king.\n\nCada paso que doy\nMe empujan para atrás,\nComo si el mundo quisiera \nVerme caer otra vez más.\n\nY si me va bien, \nSeguro que algo choca,\nPorque aquí el éxito \nEs un lujo que provoca.\n\nCada vez que me acomodo, \nTodo vira y se tuerce.\nCuando creo que avanza, \nLa vida me revierte.\n\nMe siento bien en casa,  \nEn el curro, estudiando,\nY en un segundo, ¡boom!\nOtra vez todo explotando.\n\nNo sé si es paranoia\nO si todos lo sentimos,\nPero a veces pienso \nQue el avance está prohibido.\n\nY si todo va bien, \nYa siento que algo patina,\nComo si el sistema mismo \nOdiara la alegría.\n\nYa no soy un Kid \nPero voy al Leroy,\nNo quiero currar más\nQuiero ser un Cowboy.\n\nMe sobra la magia\nNo necesito a Merlín,\nCurrando en la sombra \nPa’ brillar como un king.\n\nYa no soy un Kid \nPero voy al Leroy,\nNo quiero currar más\nQuiero ser un Cowboy.\n\nMe sobra la magia\nNo necesito a Merlín,\nCurrando en la sombra \nPa’ brillar como un king.\n\nLo único que me mantiene en pie \nSoy yo mismo,\nEl que mira hacia abajo \nY no se tira al abismo.\n\nSé que en esta vida \nTodo tiene su tiempo.\nMe quejo, respiro\nY aguanto este tormento.\n\nLa vida me grita \nQue no baje los brazos,\nY el de arriba me dice: \nLo de rendirse no es tu caso.\n\nAunque el miedo esté presente, \nAunque el peso me atrase,\nHay que seguir constante\nAunque el alma se desgaste.\n\nYa no soy un Kid \nPero voy al Leroy,\nNo quiero currar más\nQuiero ser un Cowboy.\n\nMe sobra la magia\nNo necesito a Merlín,\nCurrando en la sombra \nPa’ brillar como un king.\n\nYa no soy un Kid \nPero voy al Leroy,\nNo quiero currar más\nQuiero ser un Cowboy.\n\nMe sobra la magia\nNo necesito a Merlín,\nCurrando en la sombra \nPa’ brillar como un king.`
+            },
+            "pico-tr3s": {
+                title: "pico-tr3s",
+                text: `Te escribo canciones \nQue nunca enseño,\nApunto emociones \nCuando no las entiendo.\n\nPongo tuits distraído\npensando en tu cabello,\nen cómo te lo agarraba\nmientras tocabas el techo.\n\nMe gusta cuando te enfadas \nPara ver si voy detrás,\nSabes bien que a mí me engancha\nTu forma de provocar.\n\nTú y yo en guerra fría, \nPero hay fuego en el hielo.\nY aunque hagamos un drama, \nNos buscamos en el cielo\n\nApuntando sentimientos\nEn las notas de mi phone.\nEso lo sabes cariño\nQue tienes mi corazón.\n\nAunque a veces discutimos\nSé que tienes la razón,\nPon tu culo en mi cara,\nPico tres, un corazón.\n\nApuntando sentimientos\nEn las notas de mi phone.\nEso lo sabes cariño\nQue tienes mi corazón.\n\nAunque a veces discutimos\nSé que tienes la razón,\nPon tu culo en mi cara,\nPico tres, un corazón.\n\nComo dijeron Pimp y el Malo\n<a href="https://www.youtube.com/watch?v=1vkDOORaYwI" target="_blank">Pico tres</a>, un corazón.\nPor tu culo mi aparato,\nSentimientos, mucho love.\n\nSé que te gusta mi vibra \nPorque me ves con cariño,\nPor la forma en que te mueves\nTu me harías varios niños.\n\nHay cosas que no te dije\nPero escribí en mi libreta,\nTambién hice dibujitos\nDe cuando pienso en tus tetas.\n\nY aunque no siempre supimos\nCómo cuidar de lo nuestro,\nAprendí que en el amor\nTambién duele ser honesto.\n\nApuntando sentimientos\nEn las notas de mi phone.\nEso lo sabes cariño\nQue tienes mi corazón.\n\nAunque a veces discutimos\nSé que tienes la razón,\nPon tu culo en mi cara,\nPico tres, un corazón.\n\nApuntando sentimientos\nEn las notas de mi phone.\nEso lo sabes cariño\nQue tienes mi corazón.\n\nAunque a veces discutimos\nSé que tienes la razón,\nPon tu culo en mi cara,\nPico tres, un corazón.\n\nPico tres, un corazón. \n\nPico tres, un corazón.`
+            },
+            "esmeralda-k1ng": {
+                title: "esmeralda-k1ng",
+                text: `Quiero volar más alto\nCon el Sol me voy a quemar,\nHasta que lo consiga\nComo Bagon voy a intentar.\n\nDe Shelgon a Salamence, \nMe los voy a detonar;\nMe dirijo a Colosalia\nLlegamos pa' campeonar.\n\nEn la Calle Victoria\nToca bajarse a Blasco,\nTremenda gonorrea,\nSu equipo daba asco.\n\nDentro de esa cueva\nCon cualquiera te pegas,\nPero en cuanto la cruzas\nAl alto mando le llegas.\n\nMe lo bajo rapidito,\nlo mismo al campeón.\nVoy sin legendarios,\nPelipper pega un ciclón.\n\nSoy el vencedor,\nUn Ditto sin impostor,\nLo hice parecer fácil,\nBendecio' por el Señor.\n\nSoy campeón de Hoenn,\nEl rey del <a href="https://www.youtube.com/watch?v=6LNiXroyzr0" target="_blank">Esmeralda</a>.\nEntré en el Hall de la Fama,\nTo' mi equipo me respalda.\n\nNo hizo falta Rayquaza,\nNi Kyogre ni Groudon;\nCon puros panas de ruta\nGané la competición.\n\nDesde Villa Raíz hasta la liga,\nEn bici o buceando.\nDejé huella en cada gym\nAsí me fui entrenando.\n\nCrobat y Aire Afilado,\nCorte limpio, cero fallo;\nMagneton en el equipo\nElectrificando el estadio.\n\nMagma, Aqua y legendarios\nCreen que son nivel Dios,\nPero mi Swampert con Surf\nLes dice a todos adiós.\n\nMamá preguntó por Latios\nAl verlo en televisión,\nLe tiré la Master Ball,\nYo no tuve compasión. \n\nRegice hiela el clima,\nRegirock parte el suelo,\nRegisteel cuerpo duro,\nNi así ganan el duelo.\n\nRompí el puzzle en la cueva,\n<a href="https://www.youtube.com/watch?v=LOCaHlAVcmA" target="_blank">Braille</a> como Fyahboy;\nAhora esos golems antiguos\nMe siguen a donde voy.\n\nSoy campeón de Hoenn,\nEl rey del Esmeralda.\nEntré en el Hall de la Fama,\nTo' mi equipo me respalda.\n\nNo hizo falta Rayquaza,\nNi Kyogre ni Groudon;\nCon puros panas de ruta\nGané la competición.\n\nGuardé todos los datos,\nParecía que había ganado,\nPero se puso difícil,\nAhora el juego había cambiado.\n\nLlegué al Frente Batalla,\nQuedaba mucho que explorar,\nLa cueva de los pintores,\nA Sudowoodo hay que regar.\n\nRepartí caramelos\nComo Pablo en Medellín,\nHice el truco de la Torre,\nA los ases toca darles fin.\n\nMe enfrenté a los mejores, \nComo Yamal contra el Bicho,\nEstos perros pegan duro, \nPero no está todo dicho.\n\nGanaré a esos malparidos,\nSoy 'leyend', no es coincidencia; \nNadie tiene mis medallas, \nNadie tiene mi experiencia.\n\nComo Sabina <a href="https://www.youtube.com/watch?v=cmmJ1uiRiUM" target="_blank">500 noches</a>\nTardé hasta conseguirlo,\nPero al final les gané a todos\nAhora solo queda decirlo.\n\nSoy campeón de Hoenn,\nEl rey del Esmeralda.\nEntré en el Hall de la Fama,\nTo' mi equipo me respalda.\n\nNo hizo falta Rayquaza,\nNi Kyogre ni Groudon;\nCon puros panas de ruta\nGané la competición.\n\nSoy campeón de Hoenn,\nEl rey del Esmeralda.\nEntré en el Hall de la Fama,\nTo' mi equipo me respalda.\n\nNo hizo falta Rayquaza,\nNi Kyogre ni Groudon;\nCon puros panas de ruta\nGané la competición.`
+            }
+        };
+
+        const prompts = {
+            "la-bacha7a": `Tempo alrededor de 70–75 BPM.\nInstrumental moderna urbano emo-latina con ritmos suaves y aireados y melodías melancólicas; utiliza baterías trap suaves con charles nítidos, bajos 808 sutiles y guitarra eléctrica cálida o pads de sintetizador para aportar profundidad emocional; el ambiente debe ser melancólico pero con estilo, mezclando romance triste con un flow callejero. Añade trozos de voz sutiles o efectos atmosféricos ligeros para realzar la tensión emocional.`,
+            "fake-h0mies": `Tempo alrededor de 130–135 BPM.\nBase de rap en español con influencias de trap oscuro y atmosférico, con una fuerte carga emocional; el instrumental debe contar con texturas sintéticas frías, bajos 808 potentes, cajas secas y contundentes, y texturas ambientales de fondo.`,
+            "cow8oy": `Tempo alrededor de 80–85 BPM.\nInstrumental country-trap. Incluye guitarras acústicas cálidas con un ritmo vaquero del sur, baterías trap suaves, subgraves profundos y toques de armónica o ambiente de bar para aportar textura.`,
+            "pico-tr3s": `Tempo alrededor de 70–75 BPM.\nBase de emo trap en español triste y onírica con estética lo-fi, bajos 808 distorsionados, sintes baratos como melodía principal, texturas ambientales y una energía nostálgica y rebelde; el ambiente debe ser crudo, underground de la era de internet. Incluye melodías sencillas y melancólicas, ruido de cinta y kits de batería de sonido barato con cajas reverberadas.`,
+            "esmeralda-k1ng": `Tempo alrededor de 125–130 BPM.\nCanción de rap experimental en español con voz masculina agresiva. Base oscura, distorsionada e industrial con texturas electrónicas pesadas, sintes con glitch, ruido digital y bajos contundentes, inspirada en la estética cyberpunk: futurista, rebelde y áspera. Efectos robóticos en la voz, artefactos de autotune, transiciones bitcrushed y baterías potentes. Diseño sonoro similar al rap underground de internet o punk digital.`
+        };
+
+
+        function makeWindowDraggable(element) {
+            const header = element.querySelector(".window-header");
+            let offsetX = 0, offsetY = 0, isDragging = false;
+            header.addEventListener("mousedown", (e) => {
+                isDragging = true;
+                offsetX = e.clientX - element.offsetLeft;
+                offsetY = e.clientY - element.offsetTop;
+                setActiveWindow(element);
+            });
+            document.addEventListener("mouseup", () => { isDragging = false; });
+            document.addEventListener("mousemove", (e) => {
+                if (isDragging) {
+                    element.style.left = `${e.clientX - offsetX}px`;
+                    element.style.top = `${e.clientY - offsetY}px`;
+                }
+            });
+            element.addEventListener('mousedown', () => setActiveWindow(element));
+        }
+        
+        function makeWindowResizable(element) {
+            const handle = element.querySelector('.resize-handle');
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setActiveWindow(element);
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const startWidth = element.offsetWidth;
+                const startHeight = element.offsetHeight;
+                function doResize(e) {
+                    element.style.width = `${startWidth + e.clientX - startX}px`;
+                    element.style.height = `${startHeight + e.clientY - startY}px`;
+                }
+                function stopResize() {
+                    document.removeEventListener('mousemove', doResize);
+                    document.removeEventListener('mouseup', stopResize);
+                }
+                document.addEventListener('mousemove', doResize);
+                document.addEventListener('mouseup', stopResize);
+            });
+        }
+
+        function makeIconDraggable(element) {
+            let isDragging = false, offsetX, offsetY;
+            element.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                offsetX = e.clientX - element.offsetLeft;
+                offsetY = e.clientY - element.offsetTop;
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    element.style.left = `${e.clientX - offsetX}px`;
+                    element.style.top = `${e.clientY - offsetY}px`;
+                }
+            });
+            document.addEventListener('mouseup', () => { isDragging = false; });
+        }
+        
+        function setActiveWindow(windowToActivate) {
+            const maxZ = Array.from(document.querySelectorAll('.window')).reduce((maxZ, win) => Math.max(maxZ, parseInt(win.style.zIndex) || 100), 99);
+            windowToActivate.style.zIndex = maxZ + 1;
+            document.querySelectorAll('.window').forEach(win => {
+                const header = win.querySelector('.window-header');
+                const tab = document.getElementById(`tab-${win.id}`);
+                if (win === windowToActivate) {
+                    header.classList.add('window-header-active');
+                    header.classList.remove('window-header-inactive');
+                    if(tab) tab.classList.add('active');
+                } else {
+                    header.classList.add('window-header-inactive');
+                    header.classList.remove('window-header-active');
+                    if(tab) tab.classList.remove('active');
+                }
+            });
+        }
+        
+        // REEMPLAZA TU FUNCIÓN 'createWindow' CON ESTA
+        function createWindow(id, title, content, iconSrc, isResizable, customHeight) {
+            const existingWindow = document.getElementById(id);
+            if (existingWindow) {
+                setActiveWindow(existingWindow);
+                return;
+            }
+            const ventana = document.createElement("div");
+            ventana.className = `window ${isResizable ? 'resizable' : 'not-resizable'}`;
+            ventana.id = id;
+
+            // Lógica para la altura de la ventana
+            if (customHeight) {
+                ventana.style.height = customHeight;
+            }
+
+            if (id === 'win-popup') {
+                // Si es el pop-up, lo centramos en la pantalla
+                ventana.style.top = '50%';
+                ventana.style.left = '50%';
+                ventana.style.transform = 'translate(-50%, -50%)';
+            } else {
+                // Para todas las demás ventanas, mantenemos la posición aleatoria
+                const randomTop = Math.floor(Math.random() * (window.innerHeight - 450));
+                const randomLeft = Math.floor(Math.random() * (window.innerWidth - 400));
+                ventana.style.top = `${Math.max(0, randomTop)}px`;
+                ventana.style.left = `${Math.max(0, randomLeft)}px`;
+            }
+
+            let finalContent = `
+                <div class="window-header window-header-active">
+                    <div style="display:flex; align-items:center;">
+                        <img src="${iconSrc}" class="window-header-icon" alt=""/>
+                        <span>${title}</span>
+                    </div>
+                    <div class="window-controls">
+                        <button onclick="closeWindow('${id}')">&times;</button>
+                    </div>
+                </div>
+                <div class="window-content">${content}</div>`;
+            
+            if (isResizable) {
+                finalContent += `<div class="resize-handle"></div>`;
+            }
+            ventana.innerHTML = finalContent;
+            
+            document.getElementById("ventanas").appendChild(ventana);
+            makeWindowDraggable(ventana);
+            if (isResizable) {
+                makeWindowResizable(ventana);
+            }
+            createTaskbarTab(id, title, iconSrc);
+            setActiveWindow(ventana);
+
+            return ventana;
+        }
+
+        function closeWindow(id) {
+            const windowEl = document.getElementById(id);
+            const tabEl = document.getElementById(`tab-${id}`);
+            if (windowEl) windowEl.remove();
+            if (tabEl) tabEl.remove();
+        }
+
+        function createTaskbarTab(windowId, title, iconSrc) {
+            const tab = document.createElement('div');
+            tab.className = 'taskbar-tab active';
+            tab.id = `tab-${windowId}`;
+            tab.onclick = () => setActiveWindow(document.getElementById(windowId));
+            tab.innerHTML = `<img src="${iconSrc}" class="window-header-icon" alt=""/> ${title}`;
+            document.getElementById('taskbar-tabs').appendChild(tab);
+        }
+
+        // Pega esta nueva función dentro de tu <script>
+
+        function abrirVentanaContacto() {
+            const title = "Johnny Lemonic";
+            const icon = "imagenes/win95.png";
+
+            // IMPORTANTE: Todo este texto debe estar pegado al margen izquierdo del editor,
+            // sin espacios ni tabulaciones delante.
+        const bioText = `Fusionando la nostalgia digital de los años 90 con un proceso de creación radicalmente moderno, <b>Johnny Lemonic</b> es el alias de un director de arte que utiliza el sonido como vehículo conceptual.
+
+Sus canciones son el resultado de un diálogo único entre humano y máquina: conceptos 100% personales que, con ayuda de la IA, transforma en sonido, dando vida a una voz sintética propia cargada de emoción real.
+
+Publicado bajo el sello personal <b>Estudios Ventorrillo</b>, su EP debut <b>'Unidad D:\\sentimientos'</b> es la materialización de este universo: un proyecto concebido como su tesis de máster y un portfolio 360 que critica la cultura influencer y celebra el poder de las ideas.`;
+
+            const content = `
+            <div class="lyrics-container" style="height: 100%; display: flex; flex-direction: column;">
+                <div class="lyrics-text-box" style="white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.4; padding: 15px; background: white; border: 2px inset #dfdfdf; overflow-y: auto; height: 300px; text-align: left; color: black;">${bioText}</div>
+            </div>`;
+
+            createWindow('win-contacto', title, content, icon, false, 'auto');
+        }
+
+        // REEMPLAZA TU FUNCIÓN 'abrirCarpeta' ENTERA POR ESTA
+
+        function abrirCarpeta(tipo) {
+            const title = tipo.charAt(0).toUpperCase() + tipo.slice(1);
+            let icon = (tipo === 'letras') ? 'imagenes/icon-folder1.png' : 'imagenes/icon-folder2.png';
+            
+            // Empezamos a construir el contenido con los iconos de las canciones
+            let content = `<div class="folder-grid"> 
+                ${canciones.map(c => `
+                <div class="text-center">
+                    <img src="imagenes/${tipo === 'letras' ? 'txt-icon.png' : 'dat-icon.png'}" class="desktop-icon" data-action="open-file" data-id="${c.id}" data-type="${tipo}" />
+                    <div class="small">${c.nombre.replace('.wav', tipo === 'letras' ? '.txt' : '.dat')}</div>
+                </div>`).join('')}`;
+
+            // --- NUEVO CÓDIGO AÑADIDO ---
+            // Añadimos el icono extra dependiendo del tipo de carpeta
+            if (tipo === 'prompts') {
+                content += `
+                <div class="text-center">
+                    <a href="https://suno.com/" target="_blank">
+                    <img src="imagenes/suno-icon.png" class="desktop-icon" alt="Suno AI" />
+                    </a>
+                    <div class="small">suno.ai</div>
+                </div>`;
+            }
+            // --- FIN DEL CÓDIGO AÑADIDO ---
+
+            content += `</div>`; // Cerramos el div 'folder-grid'
+            
+            const nuevaVentana = createWindow(`win-${tipo}`, title, content, icon, true);
+
+            if (nuevaVentana) {
+                const iconosInternos = nuevaVentana.querySelectorAll('.desktop-icon');
+                const isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+                const eventType = isTouchDevice ? 'click' : 'dblclick';
+
+                iconosInternos.forEach(icon => {
+                    // Solo añadimos el evento de abrir a los que son archivos internos
+                    if (icon.hasAttribute('data-action')) {
+                        icon.addEventListener(eventType, handleIconOpen);
+                    }
+                });
+            }
+        }
+
+        function abrirArchivo(id, tipo) {
+            let content = '', title = '', icon = '';
+            const cancion = canciones.find(c => c.id === id);
+            if (!cancion) return; 
+
+            if (tipo === 'mp3') {
+                title = cancion.nombre;
+                icon = `imagenes/${cancion.iconFile}`;
+                content = `
+                  <div class="mp3-player">
+                    <img src="${cancion.gif}" class="mp3-gif" alt="Animation"/><br/>
+                    <audio controls src="${cancion.audio}" style="width:100%; margin-top: 10px;"></audio>
+                    <div style="margin-top: 5px; margin-bottom: 20px; text-align: center;">
+                        <button class="popup-button" onclick="abrirVideoPlayer('${id}')">Ver video</button>
+                    </div>
+                  </div>`;
+            } else if (tipo === 'letras') {
+                title = cancion.nombre.replace('.wav', '.txt');
+                icon = 'imagenes/txt-icon.png';
+                const letra = letras[id]; // Obtenemos el objeto con título y texto
+                content = `
+                    <div class="lyrics-container">
+                        <div class="lyrics-text-box">${letra.text}</div>
+                    </div>`;
+            } else if (tipo === 'prompts') {
+                title = cancion.nombre.replace('.wav', '.dat');
+                icon = 'imagenes/dat-icon.png';
+                content = `
+                    <div class="lyrics-container">
+                        <div class="lyrics-text-box">${prompts[id]}</div>
+                        <button class="btn btn-secondary btn-sm" style="background-color: #000080; color: white; border: 1px outset #fff; flex-shrink: 0; margin: 5px; align-self: center;" onclick="copiarPrompt('${id}', this)">📋 Copiar prompt</button>
+                    </div>
+                `;
+            }
+            createWindow(`win-${id}-${tipo}`, title, content, icon, false);
+        }
+        
+        function copiarPrompt(id, buttonElement) {
+            const texto = prompts[id];
+            navigator.clipboard.writeText(texto).then(() => {
+                const originalText = buttonElement.innerHTML;
+                buttonElement.innerHTML = '✅ Copiado!';
+                buttonElement.disabled = true;
+                setTimeout(() => {
+                    buttonElement.innerHTML = originalText;
+                    buttonElement.disabled = false;
+                }, 2000);
+            }).catch(err => {
+                console.error('Error al copiar el prompt: ', err);
+                alert('No se pudo copiar el texto.');
+            });
+        }
+        
+
+        // --- LÓGICA DEL SALVAPANTALLAS ---
+        const screensaver = document.getElementById('screensaver');
+        const logo = document.getElementById('screensaver-logo');
+        const clock = document.getElementById('clock');
+
+        let x = Math.random() * (window.innerWidth - 200);
+        let y = Math.random() * (window.innerHeight - 150);
+        let vx, vy;
+        let animationFrameId;
+
+        function changeLogoColor() {
+        const randomHue = Math.floor(Math.random() * 360);
+        // Este nuevo filtro primero tiñe la imagen y luego rota su color.
+        // Funciona perfectamente con logos en blanco y negro.
+        logo.style.filter = `sepia(1) saturate(10000%) hue-rotate(${randomHue}deg)`;
+        }
+
+        function moveLogo() {
+        // Calcula la siguiente posición
+        x += vx;
+        y += vy;
+
+        // Comprueba los rebotes con la nueva posición
+        if (x <= 0 || (x + logo.offsetWidth) >= window.innerWidth) {
+        vx = -vx;
+        // Asegura que no se quede atascado en el borde
+        x = Math.max(0, Math.min(x, window.innerWidth - logo.offsetWidth)); 
+        changeLogoColor();
+        }
+        if (y <= 0 || (y + logo.offsetHeight) >= window.innerHeight) {
+        vy = -vy;
+        // Asegura que no se quede atascado en el borde
+        y = Math.max(0, Math.min(y, window.innerHeight - logo.offsetHeight));
+        changeLogoColor();
+        }
+    
+        // Aplica la posición final
+        logo.style.left = `${x}px`;
+        logo.style.top = `${y}px`;
+    
+        animationFrameId = requestAnimationFrame(moveLogo);
+        }
+
+        function showScreensaver() {
+            if (screensaver.style.display === 'block') return;
+
+            // OCULTAMOS la barra de tareas al activar el salvapantallas
+            const bar = document.querySelector('.taskbar');
+            if (bar) bar.style.setProperty('display', 'none', 'important');
+
+            // Inicia en una nueva posición aleatoria cada vez
+            x = Math.random() * (window.innerWidth - logo.offsetWidth);
+            y = Math.random() * (window.innerHeight - logo.offsetHeight);
+            vx = (Math.random() > 0.5 ? 1 : -1) * 2;
+            vy = (Math.random() > 0.5 ? 1 : -1) * 2;
+
+            changeLogoColor(); // También cambia el color al iniciar
+            screensaver.style.display = 'block';
+            animationFrameId = requestAnimationFrame(moveLogo);
+        }
+
+        function hideScreensaver() {
+            screensaver.style.display = 'none';
+            cancelAnimationFrame(animationFrameId);
+
+            // MOSTRAMOS la barra de tareas al entrar al sistema
+            const bar = document.querySelector('.taskbar');
+            if (bar) bar.style.setProperty('display', 'flex', 'important');
+            
+            // Hacemos aparecer el texto de ayuda
+            const pista = document.getElementById('pista-ayuda');
+            if (pista) pista.style.display = 'block';
+        }
+        
+        // --- NUEVA LÓGICA PARA CLIC / DOBLE CLIC ---
+            const isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
+            function handleIconOpen(event) {
+                const icon = event.currentTarget;
+                const action = icon.dataset.action;
+                const id = icon.dataset.id;
+                const type = icon.dataset.type;
+
+                if (action === 'open-file') {
+                    abrirArchivo(id, type);
+                } else if (action === 'open-folder') {
+                    abrirCarpeta(type);
+                }
+            }
+
+        // REEMPLAZA TU BLOQUE 'DOMContentLoaded' ENTERO CON ESTE
+        document.addEventListener('DOMContentLoaded', () => {
+            // Tu código existente
+            document.querySelectorAll('.desktop-icon-container').forEach(makeIconDraggable);
+            
+
+            document.querySelectorAll('.desktop-icon').forEach(icon => {
+                if (isTouchDevice) {
+                    // En móvil, abrimos con un solo toque (click)
+                    icon.addEventListener('click', handleIconOpen);
+                } else {
+                    // En ordenador, abrimos con doble clic
+                    icon.addEventListener('dblclick', handleIconOpen);
+                }
+            });
+
+            // Eventos del salvapantallas
+            screensaver.addEventListener('click', () => {
+                hideScreensaver();
+                // Activa el pop-up 2 segundos después de cerrar el salvapantallas
+                setTimeout(abrirPopupAnuncio, 500); 
+            });
+            clock.addEventListener('click', showScreensaver);
+            showScreensaver();
+        });
+
+        function abrirVideoPlayer(id) {
+        const cancion = canciones.find(c => c.id === id);
+        if (!cancion || !cancion.videoId) {
+        alert("No se encontró el video para esta canción.");
+        return;
+        }
+
+        const title = `Video - ${cancion.nombre}`;
+        const icon = `imagenes/${cancion.iconFile}`;
+        const videoUrl = `https://www.youtube.com/embed/${cancion.videoId}?autoplay=1`;
+
+        // El iframe va dentro de un div con una clase especial para darle estilo
+        const content = `
+        <div class="video-player-content">
+            <iframe 
+                src="${videoUrl}" 
+                frameborder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen>
+            </iframe>
+        </div>`;
+    
+        // Usamos la función que ya teníamos para crear la ventana, ¡y la hacemos ajustable!
+        createWindow(`win-video-${id}`, title, content, icon, true);
+        }
+
+        // REEMPLAZA TU FUNCIÓN 'abrirOpcionesEscuchar' CON ESTA
+        function abrirOpcionesEscuchar(id) {
+            const cancion = canciones.find(c => c.id === id);
+            if (!cancion) return;
+
+            const title = `Escuchar - ${cancion.nombre}`;
+            const icon = `imagenes/${cancion.iconFile}`;
+            
+            const content = `
+                <div class="listen-options-content">
+                    <a href="${cancion.streamingLinks.youtubeMusic}" target="_blank" class="streaming-button">YouTube Music</a>
+                    <a href="${cancion.streamingLinks.spotify}" target="_blank" class="streaming-button">Spotify</a>
+                    <a href="${cancion.streamingLinks.amazonMusic}" target="_blank" class="streaming-button">Amazon Music</a>
+                    <a href="${cancion.streamingLinks.appleMusic}" target="_blank" class="streaming-button">Apple Music</a>
+                    <a href="${cancion.streamingLinks.tidal}" target="_blank" class="streaming-button">Deezer</a>
+                </div>
+            `;
+
+            // Llamamos a createWindow con el parámetro 'auto' para la altura
+            createWindow(`win-listen-${id}`, title, content, icon, false, 'auto');
+        }
+
+        // Pega esta nueva función dentro de tu <script>
+
+        function abrirPopupAnuncio() {
+
+            const zumbidoSound = new Audio('musica/zumbido.mp3');
+            zumbidoSound.play();
+
+            // IMPORTANTE: Cambia estas URLs por las tuyas
+            const smartlink = "https://www.youtube.com/playlist?list=PLFRvLnXimd30gJegaJj2t20lWRsz-Rm6Y";
+            const gifSrc = "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdDNqbmduZTE2cjBiNGQwcDdpZHpmcHV4cTYxajNnYzN2MG80NnNuOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ku5EcFe4PNGWA/giphy.gif"; // Debes crear y nombrar este GIF
+
+            const title = "¡¡¡ATENCIÓN!!!";
+            const icon = "imagenes/win95.png";
+            
+            const content = `
+                <div class="popup-content">
+                    <h3>¡El EP "Unidad D:\\sentimientos" <br> ya está disponible!</h3>
+                    <img src="${gifSrc}" class="mp3-gif" alt="Promo GIF" />
+                    <a href="${smartlink}" target="_blank" class="popup-button" onclick="closeWindow('win-popup')">
+                        ESCÚCHALO AHORA
+                    </a>
+                </div>
+            `;
+
+            // Creamos una ventana no ajustable y con altura automática
+            createWindow('win-popup', title, content, icon, false, 'auto');
+        }
+
+    </script>
+
+    <style>
+    /* Por defecto (Móvil) mostramos el texto corto */
+    .pista-texto-desktop { display: none; }
+    .pista-texto-mobile { display: block; }
+
+    /* Si la pantalla es grande (PC/Tablet), cambiamos */
+    @media (min-width: 768px) {
+        .pista-texto-desktop { display: block; }
+        .pista-texto-mobile { display: none; }
+    }
+</style>
+
+    <style>
+    .pista-texto-desktop { display: none; }
+    .pista-texto-mobile { display: block; }
+
+    @media (min-width: 768px) {
+        .pista-texto-desktop { display: block; }
+        .pista-texto-mobile { display: none; }
+    }
+</style>
+
+    <div id="pista-ayuda" style="
+        display: none; /* <--- ESTO LO MANTIENE OCULTO AL PRINCIPIO */
+        position: fixed; 
+        bottom: 50px; 
+        right: 15px; 
+        text-align: right; 
+        color: rgba(255, 255, 255, 0.7); 
+        font-family: 'MS Sans Serif', 'Segoe UI', sans-serif; 
+        font-size: 11px; 
+        text-shadow: 1px 1px 0 #000; 
+        pointer-events: none; 
+        z-index: 999; 
+        line-height: 1.5;
+        opacity: 0.8;
+    ">
+        <span class="pista-texto-desktop">
+            SISTEMA: Arrastra para organizar.<br>
+            Doble click para ejecutar.<br>
+            Click en 2025 para Reiniciar.
+        </span>
+        
+        <span class="pista-texto-mobile">
+            SISTEMA: Pulsa para explorar.<br>
+            Toca 2025 para Reiniciar.
+        </span>
+    </div>
+</body>
+</html>
